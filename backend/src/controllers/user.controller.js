@@ -28,7 +28,7 @@ const login = async (req,res) => {
 
         user.token = token;
         await user.save();
-        return res.status(httpStatus.OK).json({token:token});
+        return res.status(httpStatus.OK).json({token:token, name: user.name});
 
     }catch(e) {
         return res.status(500).json({message: "something went wrong ",e});
@@ -42,7 +42,7 @@ const register = async (req,res) => {
         const existingUser = await User.findOne({username});
 
         if(existingUser) {
-            return res.status(httpStatus.FOUND).json({message: "User Already exists"});
+            return res.status(httpStatus.CONFLICT).json({message: "User Already exists"});
         }
 
         const hashedPassword = await bcrypt.hash(password, 12);
