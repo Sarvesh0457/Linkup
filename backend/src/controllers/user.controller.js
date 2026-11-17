@@ -17,7 +17,6 @@ const login = async (req,res) => {
             return res.status(httpStatus.NOT_FOUND).json({message: "Wrong credentials"});
         }
 
-        console.log(user);
         const isMatch = await bcrypt.compare(password,user.password);
 
         if(!isMatch){
@@ -58,7 +57,7 @@ const register = async (req,res) => {
         res.status(httpStatus.CREATED).json({message: "User created"});
 
     }catch(e){
-        return res.json({message: `something went wrong ${e}`});
+        return res.status(httpStatus.INTERNAL_SERVER_ERROR).json({message: `something went wrong ${e}`});
     }
 }
 
