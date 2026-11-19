@@ -187,7 +187,7 @@ export default function Setup({ mode = 'create' }) {
     'flex h-11 w-11 items-center justify-center rounded-full border border-[#2a2e3d] transition disabled:cursor-not-allowed disabled:opacity-40'
 
   return (
-    <div className="flex min-h-[80vh] items-center justify-center px-6 py-10 font-['Inter']">
+    <div className="flex min-h-[80vh] items-center justify-center px-6 py-10 font-sans">
       <div className="flex w-full max-w-[940px] flex-col overflow-hidden rounded-[20px] border border-[#2a2e3d] bg-[#191c26] shadow-[0_30px_70px_-30px_rgba(0,0,0,.6)] md:min-h-[420px] md:flex-row">
         {/* ---- preview / lobby ---- */}
         <div className="flex min-w-0 flex-1 flex-col p-[26px]">
@@ -200,7 +200,7 @@ export default function Setup({ mode = 'create' }) {
               className={`absolute inset-0 h-full w-full -scale-x-100 object-cover ${camActive ? '' : 'hidden'}`}
             />
             {!camActive && (
-              <div className="flex h-[70px] w-[70px] items-center justify-center rounded-full bg-white/10 font-['Space_Grotesk'] text-[22px] font-semibold text-[#e9ebf3]">
+              <div className="flex h-[70px] w-[70px] items-center justify-center rounded-full bg-white/10 font-display text-[22px] font-semibold text-[#e9ebf3]">
                 {initialsOf(name)}
               </div>
             )}
@@ -268,7 +268,7 @@ export default function Setup({ mode = 'create' }) {
 
           {mode === 'create' ? (
             <div className="flex flex-1 flex-col">
-              <h2 className="mb-2 font-['Space_Grotesk'] text-[19px] font-semibold text-[#e9ebf3]">Your room is ready</h2>
+              <h2 className="mb-2 font-display text-[19px] font-semibold text-[#e9ebf3]">Your room is ready</h2>
               <p className="mb-5 text-[13.5px] leading-normal text-[#8c91a6]">
                 Share this code with your team. It stays active as long as someone's in the room.
               </p>
@@ -282,7 +282,7 @@ export default function Setup({ mode = 'create' }) {
               />
 
               <div className="mb-[22px] flex items-center justify-between rounded-xl border border-[#2a2e3d] bg-[#1f2330] px-4 py-[14px]">
-                <span className="font-['JetBrains_Mono'] text-[17px] tracking-[1px] text-[#f0a23e]">{code}</span>
+                <span className="font-mono text-[17px] tracking-[1px] text-[#f0a23e]">{code}</span>
                 <button
                   type="button"
                   onClick={copyCode}
@@ -298,7 +298,7 @@ export default function Setup({ mode = 'create' }) {
             </div>
           ) : (
             <div className="flex flex-1 flex-col">
-              <h2 className="mb-2 font-['Space_Grotesk'] text-[19px] font-semibold text-[#e9ebf3]">Enter a meeting code</h2>
+              <h2 className="mb-2 font-display text-[19px] font-semibold text-[#e9ebf3]">Enter a meeting code</h2>
               <p className="mb-5 text-[13.5px] leading-normal text-[#8c91a6]">
                 Ask whoever's hosting for their room code.
               </p>
@@ -312,7 +312,7 @@ export default function Setup({ mode = 'create' }) {
                 }}
                 onKeyDown={(e) => e.key === 'Enter' && startJoin()}
                 placeholder="e.g. LKP-7291"
-                className={`${inputCls} mb-1 font-['JetBrains_Mono'] uppercase tracking-[1.5px] placeholder:font-['Inter'] placeholder:normal-case placeholder:tracking-normal ${
+                className={`${inputCls} mb-1 font-mono uppercase tracking-[1.5px] placeholder:font-sans placeholder:normal-case placeholder:tracking-normal ${
                   joinError ? 'border-[#e2604f]' : 'border-[#2a2e3d]'
                 }`}
               />

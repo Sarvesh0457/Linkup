@@ -3,11 +3,14 @@ import httpStatus from 'http-status';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 
-const login = async (req,res) => {
-    const {username, password} = req.body;
+// only accept real, non-empty strings (objects like {"$ne": null} would become MongoDB query operators)
+const isText = (value) => typeof value === 'string' && value.trim() !== '';
 
-    if(!username || !password){
-        return res.status(400).json({message: "please provide username or password"});
+const login = async (req,res) => {
+    const {username, password} = req.body ?? {};
+
+    if(!isText(username) || !isText(password)){
+        return res.status(httpStatus.BAD_REQUEST).json({message: "please provide username and password"});
     }
 
     try{
@@ -35,7 +38,11 @@ const login = async (req,res) => {
 }
 
 const register = async (req,res) => {
-    const {name, username, password} = req.body;
+    const {name, username, password} = req.body ?? {};
+
+    if(!isText(name) || !isText(username) || !isText(password)){
+        return res.status(httpStatus.BAD_REQUEST).json({message: "please provide name, username and password"});
+    }
 
     try{
         const existingUser = await User.findOne({username});

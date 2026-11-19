@@ -160,7 +160,7 @@ function Tile({ p, stream, size = 'md', mirror, contain, pinned, onClick }) {
       />
       {!showVideo && (
         <div
-          className={`flex items-center justify-center rounded-full font-['Space_Grotesk'] font-semibold ${avatar}`}
+          className={`flex items-center justify-center rounded-full font-display font-semibold ${avatar}`}
           style={{ background: `${p.color}2e`, color: p.color }}
         >
           {initialsOf(p.name)}
@@ -498,11 +498,11 @@ export default function Call() {
   /* ---- connecting screen ---- */
   if (!joined || !minDone) {
     return (
-      <div className="flex h-dvh flex-col items-center justify-center bg-[#12141c] px-6 text-center font-['Inter'] text-[#e9ebf3]">
+      <div className="flex h-dvh flex-col items-center justify-center bg-[#12141c] px-6 text-center font-sans text-[#e9ebf3]">
         <style>{CSS}</style>
         {error ? (
           <>
-            <h2 className="mb-2 font-['Space_Grotesk'] text-xl font-semibold">Couldn't connect</h2>
+            <h2 className="mb-2 font-display text-xl font-semibold">Couldn't connect</h2>
             <p className="mb-6 max-w-[320px] text-sm text-[#8c91a6]">{error}</p>
             <button
               onClick={() => navigate('/')}
@@ -517,7 +517,7 @@ export default function Call() {
               {CHIPS.map(([label, x, y], i) => (
                 <div
                   key={label}
-                  className="absolute left-1/2 top-1/2 -ml-[22px] -mt-[22px] flex h-11 w-11 items-center justify-center rounded-full border border-[#2a2e3d] bg-[#1f2330] font-['Space_Grotesk'] text-[12.5px] font-semibold"
+                  className="absolute left-1/2 top-1/2 -ml-[22px] -mt-[22px] flex h-11 w-11 items-center justify-center rounded-full border border-[#2a2e3d] bg-[#1f2330] font-display text-[12.5px] font-semibold"
                   style={{
                     '--fx': `${x}px`, '--fy': `${y}px`, '--sx': `${x * 2.35}px`, '--sy': `${y * 2.35}px`,
                     animation: `lu-chip .65s cubic-bezier(.34,1.56,.64,1) ${i * 0.08}s both`,
@@ -568,7 +568,7 @@ export default function Call() {
   )
 
   return (
-    <div className="relative flex h-dvh flex-col overflow-hidden bg-[#12141c] font-['Inter'] text-[#e9ebf3]">
+    <div className="relative flex h-dvh flex-col overflow-hidden bg-[#12141c] font-sans text-[#e9ebf3]">
       <style>{CSS}</style>
       {participants.filter((p) => !p.isYou).map((p) => (
         <RemoteAudio key={p.id} stream={streamOf(p)} />
@@ -576,12 +576,12 @@ export default function Call() {
 
       {/* top bar */}
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-[#2a2e3d] px-5 py-3.5">
-        <div className="flex min-w-0 items-center gap-3 font-['Space_Grotesk'] text-[15px] font-semibold">
+        <div className="flex min-w-0 items-center gap-3 font-display text-[15px] font-semibold">
           <span className="truncate">{room?.title || 'Meeting'}</span>
           <button
             onClick={copyCode}
             title="Copy meeting code"
-            className="flex shrink-0 items-center gap-1.5 rounded-full border border-[#2a2e3d] bg-[#1f2330] px-2.5 py-[5px] font-['JetBrains_Mono'] text-[11.5px] font-medium text-[#8c91a6] hover:border-[#f0a23e] hover:text-[#e9ebf3]"
+            className="flex shrink-0 items-center gap-1.5 rounded-full border border-[#2a2e3d] bg-[#1f2330] px-2.5 py-[5px] font-mono text-[11.5px] font-medium text-[#8c91a6] hover:border-[#f0a23e] hover:text-[#e9ebf3]"
           >
             <Icon name="copy" className="h-3 w-3" />
             {code}
@@ -635,7 +635,7 @@ export default function Call() {
         {panel && (
           <aside className="z-10 flex w-[280px] shrink-0 flex-col overflow-hidden rounded-[14px] border border-[#2a2e3d] bg-[#191c26] shadow-[-10px_0_30px_-10px_rgba(0,0,0,.5)] max-md:absolute max-md:inset-y-[18px] max-md:right-[18px] max-md:w-[86%] max-md:max-w-[300px]">
             <div className="flex shrink-0 items-center justify-between border-b border-[#2a2e3d] py-1.5 pl-3.5 pr-2">
-              <div className="px-1.5 py-2 font-['Space_Grotesk'] text-sm font-semibold">
+              <div className="px-1.5 py-2 font-display text-sm font-semibold">
                 {panel === 'people' ? `People (${n})` : 'Chat'}
               </div>
               <button onClick={() => setPanel(null)} className="rounded-lg px-2 py-1.5 text-xl leading-none text-[#8c91a6] hover:bg-[#1f2330] hover:text-[#e9ebf3]">×</button>
@@ -646,7 +646,7 @@ export default function Call() {
                 {participants.map((p) => (
                   <div key={p.id} className="flex items-center gap-2.5 py-[7px]">
                     <div
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full font-['Space_Grotesk'] text-[11px] font-semibold"
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full font-display text-[11px] font-semibold"
                       style={{ background: `${p.color}2e`, color: p.color }}
                     >
                       {initialsOf(p.name)}
@@ -755,7 +755,7 @@ export default function Call() {
           className="fixed inset-0 z-50 flex items-center justify-center bg-[#0a0b10]/60 p-5"
         >
           <div className="w-[320px] max-w-full rounded-2xl border border-[#2a2e3d] bg-[#191c26] p-[26px] text-center">
-            <h3 className="mb-2 font-['Space_Grotesk'] text-[17px] font-semibold">Leave the meeting?</h3>
+            <h3 className="mb-2 font-display text-[17px] font-semibold">Leave the meeting?</h3>
             <p className="mb-[22px] text-[13.5px] leading-snug text-[#8c91a6]">You can rejoin anytime with the same meeting code.</p>
             <div className="flex gap-2.5">
               <button

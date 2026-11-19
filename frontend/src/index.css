@@ -9,6 +9,9 @@
   --color-amber: #f0a23e;
   --color-amber-ink: #2a1707;
   --animate-wave: wave 1s ease-in-out infinite;
+  /* loaded in index.html; the fallbacks keep text readable if the fonts can't load */
+  --font-display: 'Space Grotesk', 'Figtree Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 @keyframes wave {
   0%, 100% { height: 4px; }
