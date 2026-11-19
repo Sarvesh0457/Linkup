@@ -1,71 +1,69 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react'
+import { api } from '@/lib/api.js'
 
+// The login lives in an httpOnly cookie that JavaScript can't read (so XSS can't steal it).
+// The app asks the server who is logged in (/auth/me) and only keeps the public profile in memory.
 const AuthContext = createContext(null)
-const KEY = 'linkup_auth'
-const WEEK_MS = 7 * 24 * 60 * 60 * 1000
 
-function clearSession() {
-  try {
-    localStorage.removeItem(KEY)
-    localStorage.removeItem('token')
-    localStorage.removeItem('linkup_token') // old duplicate key; no longer written, cleared for existing users
-  } catch {
-    /* storage blocked */
-  }
-}
-
-function readSession() {
-  try {
-    const s = JSON.parse(localStorage.getItem(KEY))
-    if (s && s.token && s.expiresAt > Date.now()) return s
-  } catch {
-    /* corrupt value */
-  }
-  clearSession()
-  return null
-}
+// keeps other open tabs in sync when you log in or out
+const channel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('linkup-auth') : null
 
 export function AuthProvider({ children }) {
-  const [session, setSession] = useState(readSession) // sync read, so refresh never flashes logged-out
+  const [user, setUser] = useState(null) // { name, username } or null
+  const [ready, setReady] = useState(false)
 
-  const login = useCallback((userData) => {
-    const s = { name: userData.name, token: userData.token, expiresAt: Date.now() + WEEK_MS }
+  useEffect(() => {
+    // logins saved by older versions of the app lived in localStorage; remove them
     try {
-      localStorage.setItem(KEY, JSON.stringify(s))
-      localStorage.setItem('token', s.token)
+      ;['linkup_auth', 'token', 'linkup_token'].forEach((k) => localStorage.removeItem(k))
     } catch {
-      /* storage blocked: still logged in for this tab */
+      /* storage blocked */
     }
-    setSession(s)
+    api('/auth/me')
+      .then((d) => setUser(d.user))
+      .catch(() => setUser(null))
+      .finally(() => setReady(true))
   }, [])
 
-  const logout = useCallback(() => {
-    clearSession()
-    setSession(null)
-  }, [])
-
-  // auto-logout when the week runs out
   useEffect(() => {
-    if (!session) return
-    const t = setTimeout(logout, Math.max(0, session.expiresAt - Date.now()))
-    return () => clearTimeout(t)
-  }, [session, logout])
-
-  // keep tabs in sync
-  useEffect(() => {
-    const onStorage = (e) => e.key === KEY && setSession(readSession())
-    window.addEventListener('storage', onStorage)
-    return () => window.removeEventListener('storage', onStorage)
+    if (!channel) return
+    const onMessage = (e) => {
+      if (e.data?.type === 'login') setUser(e.data.user)
+      if (e.data?.type === 'logout') setUser(null)
+    }
+    channel.addEventListener('message', onMessage)
+    return () => channel.removeEventListener('message', onMessage)
   }, [])
 
-  const value = {
-    user: session ? { name: session.name, token: session.token } : null,
-    isLoggedIn: !!session,
-    login,
-    logout,
-  }
+  // called with the user returned by /auth/login or /auth/register (the cookie is already set)
+  const login = useCallback((u) => {
+    setUser(u)
+    channel?.postMessage({ type: 'login', user: u })
+  }, [])
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+  // ends the session on the server; everywhere = every device
+  const logout = useCallback(async ({ everywhere = false } = {}) => {
+    try {
+      await api(everywhere ? '/auth/logout-all' : '/auth/logout', { method: 'POST' })
+    } catch {
+      /* already logged out or offline: still clear it here */
+    }
+    setUser(null)
+    channel?.postMessage({ type: 'logout' })
+  }, [])
+
+  // the server said 401: the session expired or was ended elsewhere
+  const sessionExpired = useCallback(() => {
+    setUser(null)
+    channel?.postMessage({ type: 'logout' })
+  }, [])
+
+  // wait for /auth/me before rendering, so logged-in pages don't flash the login redirect
+  if (!ready) return <div className="min-h-screen bg-bg" aria-busy="true" />
+
+  return (
+    <AuthContext.Provider value={{ user, isLoggedIn: !!user, login, logout, sessionExpired }}>{children}</AuthContext.Provider>
+  )
 }
 
 // a hook next to its provider is the usual pattern; fast refresh just reloads this file fully

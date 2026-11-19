@@ -54,8 +54,8 @@ export default function Navbar() {
             size="sm"
             className="ml-2 border-line bg-transparent text-ink hover:bg-panel-2"
             onClick={() => {
-              logout()
-              navigate("/")
+              // ends the session on the server too, then back to the start page
+              logout().then(() => navigate("/"))
             }}
           >
             Log out

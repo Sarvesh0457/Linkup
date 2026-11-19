@@ -2,23 +2,36 @@ import express from 'express';
 import {createServer} from 'node:http';
 import mongoose from 'mongoose';
 import cors from 'cors';
+import helmet from 'helmet';
+import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
 dotenv.config();
 
-import { allowedOrigins, connectToSocket } from './controllers/SocketManager.js';
-
+import { connectToSocket } from './controllers/SocketManager.js';
+import { allowedOrigins, apiLimiter, checkOrigin } from './middleware/security.js';
+import authRoutes from './routes/auth.routes.js';
 import userRoutes from './routes/user.routes.js';
 
 const app = express();
 const server = createServer(app);
 connectToSocket(server);
 
-// set CLIENT_URL in .env to your frontend's address before deploying (any origin is allowed when it's unset)
-app.use(cors({ origin: allowedOrigins() }));
-app.use(express.json({limit:'40kb'}));
-app.use(express.urlencoded({limit:'40kb', extended: true}));
+// Behind a host's proxy (Render, Railway) and the Vercel rewrite, the real client IP is in
+// X-Forwarded-For. TRUST_PROXY = how many proxies sit in front (see README). 0 in development.
+app.set('trust proxy', Number(process.env.TRUST_PROXY ?? 0));
+app.disable('x-powered-by');
 
+app.use(helmet()); // security headers (no sniffing, no framing, HSTS, ...)
+app.use(cors({ origin: allowedOrigins(), credentials: true }));
+app.use(cookieParser());
+app.use(express.json({limit:'40kb'}));
+
+app.use("/api", apiLimiter, checkOrigin);
+app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/users", userRoutes);
+
+// for uptime checks, and to confirm TRUST_PROXY: "ip" should be your own address
+app.get("/api/v1/health", (req, res) => res.json({ ok: true, ip: req.ip }));
 
 // unknown routes answer in JSON like the rest of the API
 app.use((req, res) => {
@@ -49,6 +62,12 @@ const start = async () => {
 
         const connectDB = await mongoose.connect(process.env.MONGO_URL);
         console.log(`DB Host: ${connectDB.connection.host}`);
+
+        // e.g. the port is already taken: report it clearly and exit with a failure code
+        server.on('error', (err) => {
+            console.log(`Error in starting server: ${err.code === 'EADDRINUSE' ? `port ${PORT} is already in use` : err.message}`);
+            process.exit(1);
+        });
 
         server.listen(PORT, () => {
             console.log(`app listening on PORT: ${PORT}`);

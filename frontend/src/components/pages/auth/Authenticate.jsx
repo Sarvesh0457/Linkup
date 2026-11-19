@@ -4,8 +4,18 @@ import { useAuth } from "@/context/AuthContext.jsx"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { api } from "@/lib/api.js"
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001"
+// same rules as the server (backend/src/lib/validate.js), checked here first for quicker feedback
+const USERNAME_RULE = /^[a-z0-9._-]{3,30}$/
+function signupProblem({ name, username, password }) {
+  if (name.trim().length > 40) return "Name can be at most 40 characters."
+  if (!USERNAME_RULE.test(username.trim().toLowerCase()))
+    return "Username must be 3-30 characters: letters, numbers, dots, dashes or underscores."
+  if (password.length < 8) return "Password must be at least 8 characters."
+  if (new TextEncoder().encode(password).length > 72) return "Password is too long (max 72 characters)."
+  return null
+}
 
 export default function Authenticate({ mode = "login" }) {
   const [name, setName] = useState("")
@@ -31,40 +41,22 @@ export default function Authenticate({ mode = "login" }) {
       return
     }
 
+    if (!isLogin) {
+      const problem = signupProblem({ name, username, password })
+      if (problem) {
+        setError(problem)
+        return
+      }
+    }
+
     setLoading(true)
     try {
-      if (isLogin) {
-        const res = await fetch(`${API_URL}/api/v1/users/login`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ username, password }),
-        })
-        const data = await res.json()
-        if (!res.ok) throw new Error(data.message || "Login failed")
-
-        // falls back to the username in case an account has no name stored
-        login({ name: data.name || username, token: data.token })
-      } else {
-        const registerRes = await fetch(`${API_URL}/api/v1/users/register`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name, username, password }),
-        })
-        const registerData = await registerRes.json()
-        if (!registerRes.ok) throw new Error(registerData.message || "Sign up failed")
-
-        // /register doesn't return a token, so log in right after with the
-        // same credentials to actually get one.
-        const loginRes = await fetch(`${API_URL}/api/v1/users/login`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ username, password }),
-        })
-        const loginData = await loginRes.json()
-        if (!loginRes.ok) throw new Error(loginData.message || "Login after sign up failed")
-
-        login({ name, token: loginData.token })
-      }
+      // the server sets an httpOnly session cookie and returns the public profile;
+      // sign-up logs you in straight away
+      const data = isLogin
+        ? await api("/auth/login", { method: "POST", body: { username, password } })
+        : await api("/auth/register", { method: "POST", body: { name, username, password } })
+      login(data.user)
 
       // back to the call link they opened, with the code filled in; otherwise home
       if (redirect) navigate(redirect.next, { replace: true, state: { code: redirect.code } })
@@ -114,6 +106,8 @@ export default function Authenticate({ mode = "login" }) {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Jordan Lee"
+                autoComplete="name"
+                maxLength={40}
                 className="border-line bg-panel-2 text-ink placeholder:text-muted-ink"
               />
             </div>
@@ -128,8 +122,15 @@ export default function Authenticate({ mode = "login" }) {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               placeholder="jordanlee"
+              autoComplete="username"
+              autoCapitalize="none"
+              spellCheck={false}
+              maxLength={30}
               className="border-line bg-panel-2 text-ink placeholder:text-muted-ink"
             />
+            {!isLogin && (
+              <p className="mt-1.5 text-[11.5px] text-muted-ink">3-30 characters: letters, numbers, dots, dashes, underscores</p>
+            )}
           </div>
 
           <div>
@@ -142,8 +143,11 @@ export default function Authenticate({ mode = "login" }) {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
+              autoComplete={isLogin ? "current-password" : "new-password"}
+              maxLength={72}
               className="border-line bg-panel-2 text-ink placeholder:text-muted-ink"
             />
+            {!isLogin && <p className="mt-1.5 text-[11.5px] text-muted-ink">At least 8 characters</p>}
           </div>
 
           {error && <p className="text-[12.5px] text-red-400">{error}</p>}

@@ -54,6 +54,8 @@ export default function Setup({ mode = 'create' }) {
 
   const [code] = useState(generateCode)
   const [title, setTitle] = useState('')
+  // host option: people wait until you let them in
+  const [waitingRoom, setWaitingRoom] = useState(false)
   const location = useLocation()
   // prefilled when arriving from a call link (Call.jsx and login pass the code along)
   const [joinCode, setJoinCode] = useState(() => location.state?.code || '')
@@ -154,14 +156,14 @@ export default function Setup({ mode = 'create' }) {
     }
   }, [stream])
 
-  function enterCall(roomCode, meetingTitle) {
+  function enterCall(roomCode, meetingTitle, withWaitingRoom = false) {
     navigate(`/call/${encodeURIComponent(roomCode)}`, {
-      state: { title: meetingTitle, mic: micActive, cam: camActive },
+      state: { title: meetingTitle, mic: micActive, cam: camActive, waitingRoom: withWaitingRoom },
     })
   }
 
   function startNew() {
-    enterCall(code, title.trim())
+    enterCall(code, title.trim(), waitingRoom)
   }
 
   function startJoin() {
@@ -281,6 +283,30 @@ export default function Setup({ mode = 'create' }) {
                 placeholder="e.g. Product sync — Q4 roadmap"
                 className={`${inputCls} mb-[14px] border-[#2a2e3d]`}
               />
+
+              {/* waiting room: guests wait until the host admits them */}
+              <button
+                type="button"
+                role="switch"
+                aria-checked={waitingRoom}
+                onClick={() => setWaitingRoom((v) => !v)}
+                className="mb-[14px] flex w-full items-center gap-3 rounded-xl border border-[#2a2e3d] bg-[#1f2330] px-4 py-3 text-left transition hover:border-[#3a3f52]"
+              >
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[13.5px] font-semibold text-[#e9ebf3]">Waiting room</span>
+                  <span className="block text-[12px] text-[#8c91a6]">
+                    {waitingRoom ? 'You approve each person before they join' : 'Anyone with the code joins straight away'}
+                  </span>
+                </span>
+                <span
+                  className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${waitingRoom ? 'bg-[#f0a23e]' : 'bg-[#2a2e3d]'}`}
+                  aria-hidden="true"
+                >
+                  <span
+                    className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-[left] ${waitingRoom ? 'left-[22px]' : 'left-0.5'}`}
+                  />
+                </span>
+              </button>
 
               <div className="mb-[22px] flex items-center justify-between rounded-xl border border-[#2a2e3d] bg-[#1f2330] px-4 py-[14px]">
                 <span className="font-mono text-[17px] tracking-[1px] text-[#f0a23e]">{code}</span>

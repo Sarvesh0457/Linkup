@@ -2,280 +2,379 @@
 
 # LinkUp
 
-**Video meetings in your browser. Create a room, share the code, and start talking.**
+**Peer-to-peer video meetings in the browser: create a room, share the code, start talking.**
 
-Peer-to-peer video calls built on WebRTC, with Socket.IO for signaling, a React front end, and a Node/Express + MongoDB back end.
+Built from scratch with **WebRTC** for audio/video, **Socket.IO** for signaling, **React** on the front end and **Node / Express / MongoDB** on the back end.
 
-[Live Demo](#) · [Report a Bug](https://github.com/Sarvesh0457/Linkup/issues) · [Request a Feature](https://github.com/Sarvesh0457/Linkup/issues)
+[**Live demo**](#) · [Features](#features) · [How it works](#how-it-works) · [Security](#security) · [Run it locally](#getting-started) · [Deploy](#deployment)
 
-<!-- Add a hero screenshot or GIF here once deployed -->
-<!-- ![LinkUp preview](docs/screenshots/hero.png) -->
+![React](https://img.shields.io/badge/React-19-61dafb?logo=react&logoColor=white)
+![Node.js](https://img.shields.io/badge/Node.js-Express_5-339933?logo=node.js&logoColor=white)
+![Socket.IO](https://img.shields.io/badge/Socket.IO-4-010101?logo=socket.io&logoColor=white)
+![WebRTC](https://img.shields.io/badge/WebRTC-peer--to--peer-333333?logo=webrtc&logoColor=white)
+![MongoDB](https://img.shields.io/badge/MongoDB-Mongoose_9-47a248?logo=mongodb&logoColor=white)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-38bdf8?logo=tailwindcss&logoColor=white)
+
+<!-- Replace with a screenshot or short GIF of a call -->
+<!-- ![LinkUp call](docs/screenshots/call.png) -->
 
 </div>
 
 ---
 
-## Table of Contents
+## Contents
 
 - [Features](#features)
 - [Screenshots](#screenshots)
-- [Tech Stack](#tech-stack)
-- [How It Works](#how-it-works)
-- [Getting Started](#getting-started)
-- [Environment Variables](#environment-variables)
-- [Project Structure](#project-structure)
-- [API Reference](#api-reference)
-- [Socket Events](#socket-events)
+- [How it works](#how-it-works)
+- [Security](#security)
+- [Tech stack](#tech-stack)
+- [Project structure](#project-structure)
+- [Getting started](#getting-started)
+- [Environment variables](#environment-variables)
+- [API reference](#api-reference)
+- [Socket events](#socket-events)
 - [Deployment](#deployment)
-- [Roadmap](#roadmap)
-- [Author](#author)
+- [Limitations and roadmap](#limitations-and-roadmap)
+- [What I learned](#what-i-learned)
 
 ---
 
 ## Features
 
 **Meetings**
-- Create a meeting and get a code you can share, with an optional meeting title
-- Join with a code, or paste the whole meeting link
-- A lobby where you can check your camera and mic before joining
-- Grid view and speaker view, and you can pin a participant
-- Screen sharing
-- A meeting timer that stays in sync with the server clock
+- Create a room and get a short code (e.g. `LKP-7291`); give it a title, or the code is used as the title
+- Join with a code or a pasted link. Links work even when you're logged out: you log in, then land on the join screen with the code filled in
+- Lobby with camera preview and mic level before you join
+- Grid and speaker views, pin anyone, screen sharing with automatic presenter view
 
-**Collaboration**
-- In-room chat with an unread-message badge; people who join late get the earlier messages
-- Raise your hand
-- Emoji reactions (👍 ❤️ 😂 🎉 👏 🙌)
-- Everyone sees each participant's mic and camera status as it changes
+**Host controls**
+- **Waiting room** (optional, chosen when creating the meeting, can be toggled mid-call): guests wait until the host admits or denies them
+- Mute a participant, remove a participant (they can't rejoin that meeting), end the meeting for everyone
+- If the host leaves, the host role passes to the next person automatically
 
-**Accounts**
-- Register and log in, with passwords hashed using bcrypt
-- You stay logged in for 7 days, with automatic logout when the session expires
-- Logging in or out in one tab updates your other tabs
+**Chat and reactions**
+- In-call chat with history for people who join late
+- **Reactions on messages** (👍 ❤️ 😂 🎉 👏 🙌) with counts and who reacted
+- **Typing indicator**: "Priya is typing…"
+- Floating emoji reactions and raise-hand
+
+**Meeting history**
+- Every call you join is recorded by the server: title, time, duration, who was there, and whether you hosted
+- "Recent meetings" on the home page and a full history page with rejoin and delete
+
+**Connection quality indicator**
+- Signal bars on every participant, computed from WebRTC's own statistics (`RTCPeerConnection.getStats()`): round-trip time, packet loss, and whether the connection is direct or relayed
 
 ---
 
 ## Screenshots
 
-<!-- Save images in docs/screenshots/ and uncomment the lines below -->
+<!-- Save images in docs/screenshots/ and remove the comment markers -->
 
-| Landing | Lobby / Setup |
+| Home | Lobby with waiting room |
 |:---:|:---:|
-| <!-- ![Landing](docs/screenshots/landing.png) --> | <!-- ![Setup](docs/screenshots/setup.png) --> |
+| <!-- ![Home](docs/screenshots/home.png) --> | <!-- ![Lobby](docs/screenshots/lobby.png) --> |
 
-| In Call (Grid) | Screen Share + Chat |
+| In a call | Host: waiting room and controls |
 |:---:|:---:|
-| <!-- ![Call](docs/screenshots/call-grid.png) --> | <!-- ![Share](docs/screenshots/call-share.png) --> |
+| <!-- ![Call](docs/screenshots/call.png) --> | <!-- ![Host controls](docs/screenshots/host-controls.png) --> |
+
+| Chat with reactions | Meeting history |
+|:---:|:---:|
+| <!-- ![Chat](docs/screenshots/chat.png) --> | <!-- ![History](docs/screenshots/history.png) --> |
 
 ---
 
-## Tech Stack
+## How it works
 
-| Layer | Technology |
-|---|---|
-| **Frontend** | React 19, Vite, React Router 7, Tailwind CSS 4, shadcn/ui |
-| **Real-time** | WebRTC (`RTCPeerConnection`), Socket.IO client |
-| **Backend** | Node.js, Express 5, Socket.IO |
-| **Database** | MongoDB with Mongoose |
-| **Auth** | bcrypt password hashing, random token per login |
+### Architecture
 
----
+```mermaid
+flowchart LR
+    subgraph Browser["Browser (React)"]
+        UI[App UI]
+        RTC[RTCPeerConnection]
+    end
+    subgraph Vercel
+        Static[Static app]
+        Proxy["/api rewrite"]
+    end
+    subgraph Backend["Render / Railway (Node)"]
+        API[Express REST API]
+        WS[Socket.IO signaling]
+    end
+    DB[(MongoDB Atlas)]
+    Peer[Other participant's browser]
 
-## How It Works
+    UI -- "HTTPS /api (session cookie)" --> Proxy --> API
+    UI -- "WebSocket (one-time ticket)" --> WS
+    API --> DB
+    WS --> DB
+    RTC <-. "audio / video, peer-to-peer" .-> Peer
+```
 
-LinkUp uses a **mesh** setup: each participant's browser connects directly to every other participant's browser. The server only *signals*. It helps the browsers find each other, but the audio and video never go through it.
+- The **REST API** (accounts, sessions, history) is reached through a **Vercel rewrite**, so it lives on the same site as the app and the httpOnly session cookie stays first-party.
+- The **Socket.IO server** handles signaling, room state, chat and host controls. WebSockets can't go through the rewrite, so the browser first gets a **one-time, 60-second ticket** from the API and connects with it.
+- **Audio and video never touch the server.** Browsers send them directly to each other over WebRTC.
+
+### Joining a call (signaling)
 
 ```mermaid
 sequenceDiagram
-    participant A as Browser A
-    participant S as Socket.IO Server
-    participant B as Browser B
+    participant A as Alice (host)
+    participant S as Socket.IO server
+    participant B as Bob
 
-    A->>S: join-call(code, {name, mic, cam})
-    B->>S: join-call(code, {name, mic, cam})
-    S-->>A: user-joined(B, peers, info)
-    S-->>B: user-joined(B, peers, info)
-    A->>S: signal(B, SDP offer)
-    S-->>B: signal(A, SDP offer)
-    B->>S: signal(A, SDP answer + ICE)
-    S-->>A: signal(B, SDP answer + ICE)
-    A-->>B: Direct P2P audio / video (WebRTC)
+    B->>S: join-call(code)
+    S-->>B: waiting (waiting room is on)
+    S-->>A: waiting-list [Bob]
+    A->>S: host:admit(Bob)
+    S-->>A: user-joined(Bob)
+    S-->>B: user-joined + room-info
+    B->>S: signal(Alice, SDP offer)
+    S-->>A: signal(Bob, SDP offer)
+    A->>S: signal(Bob, SDP answer + ICE candidates)
+    S-->>B: signal(Alice, answer + ICE)
+    A-->>B: Direct audio/video (WebRTC)
 ```
 
-1. **Signaling.** Browsers exchange SDP offers/answers and ICE candidates through the `signal` socket event.
-2. **NAT traversal.** Google's public STUN servers help browsers find their public addresses.
-3. **Room state.** The server keeps room data in memory: who is connected, each person's mic/cam/hand/sharing status, chat history, and when the meeting started. When the last person leaves, the room is deleted.
+The newcomer creates an `RTCPeerConnection` to everyone already in the room (a **mesh**). Offers, answers and ICE candidates travel through the `signal` event, and the server only relays them between people in the **same** room.
 
-> **Note:** A mesh works best for small groups, roughly 2–6 people. Each person uploads one stream per other participant, so bandwidth use goes up quickly as more people join.
+### STUN, TURN and why there is no TURN server
+
+Most devices sit behind a router (NAT) and don't know their public address.
+
+- **STUN** answers "what's my public address?". It costs almost nothing, so LinkUp uses Google's public STUN servers. Most calls (roughly 80–90%) connect **directly** this way.
+- **TURN** is a relay for networks that block direct connections (strict corporate firewalls, some mobile networks). Every byte of video goes through it, so it costs real bandwidth and money.
+
+LinkUp is a learning and portfolio project, so it **ships without a TURN server**. Calls work on most home and office networks; on very strict networks they may connect without video. TURN support is already built in: set `VITE_TURN_URL`, `VITE_TURN_USERNAME` and `VITE_TURN_CREDENTIAL` and the browser uses it automatically, only when a direct path fails.
+
+The connection-quality tooltip shows which path each call actually took: *Direct (same local network)*, *Direct peer-to-peer (found via STUN)* or *Relayed through a TURN server*.
 
 ---
 
-## Getting Started
+## Security
 
-### Prerequisites
+| Area | What LinkUp does |
+|---|---|
+| **Sessions** | Login creates a random 256-bit session secret stored in an **httpOnly, SameSite=Lax** cookie (Secure in production). JavaScript can't read it, so an XSS bug can't steal it. Nothing about the login is kept in `localStorage`. |
+| **Session storage** | Only a **SHA-256 hash** of each secret is stored in MongoDB, so a database leak doesn't expose live sessions. Sessions expire after 30 days of inactivity (MongoDB TTL index). |
+| **Logout** | Logout deletes the session **on the server**, not just in the browser. "Log out everywhere" ends every session for the account. Each device has its own session. |
+| **Passwords** | Hashed with **bcrypt** (cost 12). 8–72 characters; longer passwords are refused instead of being silently truncated by bcrypt's 72-byte limit. |
+| **Brute force** | Rate limits: 10 failed logins per 15 minutes per IP + username, 5 sign-ups per hour per IP, and a general API limit. |
+| **User enumeration** | "No such user" and "wrong password" return the same status, message **and timing** (a dummy bcrypt comparison runs when the user doesn't exist). |
+| **Input validation** | Usernames are trimmed and lowercased (3–30 characters, `a-z 0-9 . _ -`), names ≤ 40 characters. Only real strings are accepted, which blocks NoSQL operator injection like `{"$ne": null}`. |
+| **CSRF** | SameSite cookies, plus an **Origin check** that rejects state-changing requests from any site other than `CLIENT_URL`. |
+| **CORS** | API and socket only accept the configured frontend origin(s) in production. |
+| **Socket auth** | Sockets require a single-use ticket (valid 60 s) issued to a logged-in session. Display names come from the account, so nobody can impersonate someone in chat. |
+| **Room isolation** | Signaling messages are only relayed between members of the same room. Host actions are checked on the server, so a modified client can't mute or remove people. |
+| **Headers** | `helmet` on the API; CSP, `X-Frame-Options`, `nosniff`, `Referrer-Policy` and `Permissions-Policy` on the frontend (see `frontend/vercel.json`). |
+| **Errors** | Clients get generic messages; details stay in server logs. Password hashes and session secrets are never logged. |
 
-- [Node.js](https://nodejs.org/) 18 or newer
-- A MongoDB database ([MongoDB Atlas](https://www.mongodb.com/atlas) free tier works)
+---
 
-### 1. Clone the repo
+## Tech stack
+
+| Layer | Technology |
+|---|---|
+| Frontend | React 19, Vite 7, React Router 7, Tailwind CSS 4 |
+| Real-time | WebRTC (`RTCPeerConnection`, `getStats`), Socket.IO client |
+| Backend | Node.js, Express 5, Socket.IO 4 |
+| Database | MongoDB with Mongoose 9 |
+| Security | bcrypt, httpOnly cookie sessions, express-rate-limit, helmet, cookie-parser |
+| Hosting | Vercel (frontend), Render or Railway (backend), MongoDB Atlas |
+
+---
+
+## Project structure
+
+```
+LinkUp/
+├── backend/
+│   └── src/
+│       ├── app.js                        # Express setup, security middleware, startup
+│       ├── controllers/
+│       │   ├── auth.controller.js        # register, login, logout, me, socket ticket
+│       │   ├── history.controller.js     # meeting history
+│       │   └── SocketManager.js          # rooms, signaling, waiting room, host controls, chat
+│       ├── lib/
+│       │   ├── session.js                # cookie sessions (hashed, sliding expiry)
+│       │   ├── tickets.js                # one-time socket tickets
+│       │   └── validate.js               # input rules
+│       ├── middleware/
+│       │   ├── auth.js                   # requireAuth
+│       │   └── security.js               # rate limits, origin check, CORS origins
+│       ├── models/                       # User, Session, Meeting
+│       └── routes/                       # /api/v1/auth, /api/v1/users
+│
+└── frontend/
+    ├── vercel.json                       # /api rewrite, SPA fallback, security headers
+    └── src/
+        ├── context/AuthContext.jsx       # who is logged in (asks /auth/me)
+        ├── lib/                          # api client, history hook, formatting
+        └── components/pages/
+            ├── landing/                  # landing + home (recent meetings)
+            ├── auth/                     # log in / sign up
+            ├── home/Setup.jsx            # lobby: preview, title, waiting room
+            ├── call/Call.jsx             # the meeting room
+            └── history/History.jsx       # meeting history
+```
+
+---
+
+## Getting started
+
+**Requirements:** Node.js 20+ and a MongoDB database (the free [MongoDB Atlas](https://www.mongodb.com/atlas) tier is enough).
 
 ```bash
 git clone https://github.com/Sarvesh0457/Linkup.git
 cd Linkup
 ```
 
-### 2. Set up the backend
+**Backend**
 
 ```bash
 cd backend
 npm install
+cp .env.example .env      # then set MONGO_URL
+npm run dev               # http://localhost:3001
 ```
 
-Create `backend/.env`:
-
-```env
-PORT=3001
-MONGO_URL=your_mongodb_connection_string
-```
-
-Start the server:
-
-```bash
-npm run dev
-```
-
-### 3. Set up the frontend
-
-In a new terminal:
+**Frontend** (in a second terminal)
 
 ```bash
 cd frontend
 npm install
-npm run dev
+cp .env.example .env      # defaults point at localhost:3001
+npm run dev               # http://localhost:5173
 ```
 
-Open **http://localhost:5173**. To test a call on one computer, open the meeting in two browser windows (for example, one normal and one incognito) and log in with different accounts.
+In development Vite forwards `/api` to the backend, just like Vercel does in production. To try a call on one machine, open the app in a normal window and a private window and log in with two different accounts.
 
 ---
 
-## Environment Variables
+## Environment variables
 
 ### Backend (`backend/.env`)
 
-| Variable | Description | Example |
+| Variable | Required | Description |
 |---|---|---|
-| `PORT` | Port the server listens on | `3001` |
-| `MONGO_URL` | MongoDB connection string | `mongodb+srv://user:pass@cluster.mongodb.net/linkup` |
+| `MONGO_URL` | yes | MongoDB connection string |
+| `PORT` | no | Port to listen on (default `3001`; hosts set it for you) |
+| `NODE_ENV` | production | Set to `production` so the session cookie is `Secure` (HTTPS only) |
+| `CLIENT_URL` | production | Your frontend URL, e.g. `https://linkup.vercel.app` (comma-separate several). Unset = any origin, for development only |
+| `TRUST_PROXY` | production | Number of proxies in front of the app, so rate limits see real client IPs. With Vercel → Render this is usually `2`; check that `/api/v1/health` shows your own IP |
 
 ### Frontend (`frontend/.env`)
 
-| Variable | Description | Default |
+| Variable | Required | Description |
 |---|---|---|
-| `VITE_API_URL` | Backend URL, used for the REST API and Socket.IO | `http://localhost:3001` |
-
-> **Never commit `.env` files.** Both are already in `.gitignore`.
-
----
-
-## Project Structure
-
-```
-LinkUp/
-├── backend/
-│   └── src/
-│       ├── app.js                    # Express + HTTP server + DB connection
-│       ├── controllers/
-│       │   ├── SocketManager.js      # Rooms, signaling, chat, reactions, peer state
-│       │   └── user.controller.js    # Register / login
-│       ├── models/
-│       │   ├── user.model.js
-│       │   └── meeting.model.js
-│       └── routes/
-│           └── user.routes.js
-│
-└── frontend/
-    └── src/
-        ├── App.jsx                   # Routes
-        ├── Navbar.jsx
-        ├── context/
-        │   └── AuthContext.jsx       # Saved session, expiry, sync between tabs
-        └── components/pages/
-            ├── landing/              # Hero + meeting options
-            ├── auth/                 # Login / signup
-            ├── home/Setup.jsx        # Create / join lobby with device preview
-            └── call/Call.jsx         # The meeting room
-```
+| `VITE_SOCKET_URL` | yes | Backend address for the WebSocket, e.g. `https://linkup-api.onrender.com` |
+| `VITE_DEV_API` | dev only | Where `npm run dev` forwards `/api` (default `http://localhost:3001`) |
+| `VITE_TURN_URL` / `_USERNAME` / `_CREDENTIAL` | no | Optional TURN server |
 
 ---
 
-## API Reference
+## API reference
 
-Base URL: `/api/v1/users`
+All routes are under `/api/v1`. Authenticated routes use the session cookie.
 
-| Method | Endpoint | Body | Response |
-|---|---|---|---|
-| `POST` | `/register` | `{ name, username, password }` | `201 { message }` |
-| `POST` | `/login` | `{ username, password }` | `200 { token, name }` |
+| Method | Route | Auth | Description |
+|---|---|:---:|---|
+| `POST` | `/auth/register` | | Create an account and log in. Body: `{ name, username, password }` |
+| `POST` | `/auth/login` | | Log in. Body: `{ username, password }` |
+| `POST` | `/auth/logout` | | End this browser's session |
+| `POST` | `/auth/logout-all` | ✓ | End every session for this account |
+| `GET` | `/auth/me` | ✓ | Current user `{ name, username }` |
+| `POST` | `/auth/socket-ticket` | ✓ | One-time ticket for opening the socket |
+| `GET` | `/users/history?limit=50` | ✓ | Your meetings, newest first |
+| `DELETE` | `/users/history/:id` | ✓ | Remove one meeting from your history |
+| `DELETE` | `/users/history` | ✓ | Clear your history |
+| `GET` | `/health` | | Uptime check (also shows the IP the server sees) |
 
 ---
 
-## Socket Events
+## Socket events
 
-| Event | Direction | Payload | Purpose |
-|---|---|---|---|
-| `join-call` | client → server | `code, { name, title, mic, cam }` | Join or create a room |
-| `user-joined` | server → room | `socketId, peerIds[], infoMap` | Someone joined |
-| `room-info` | server → client | `{ title, startedAt, serverNow }` | Meeting title and server time for the timer |
-| `signal` | both | `toId / fromId, message` | WebRTC SDP and ICE exchange |
-| `peer-state` | both | `{ mic?, cam?, hand?, sharing? }` | Mic, camera, hand or screen-share status changed |
-| `reaction` | both | `emoji` | Send an emoji reaction |
-| `chat-message` | both | `text, senderName, socketId` | Chat |
-| `user-left` | server → room | `socketId` | Someone left |
+| Event | Direction | Purpose |
+|---|---|---|
+| `join-call` | client → server | Join or create a room `(code, { title, waitingRoom, mic, cam })` |
+| `waiting` / `join-denied` | server → client | Held in the waiting room / not let in (`denied`, `removed`, `ended`) |
+| `room-info` | server → client | Title, start time, host, waiting-room setting |
+| `user-joined` / `user-left` | server → room | Participants changing |
+| `signal` | both | WebRTC SDP offers/answers and ICE candidates |
+| `peer-state` | both | Mic, camera, hand and screen-share state |
+| `chat-message` / `chat-react` / `chat-reactions` | both | Chat, message reactions |
+| `typing` | both | Typing indicator |
+| `reaction` | both | Floating emoji reactions |
+| `waiting-list` | server → host | Who is waiting |
+| `host:admit` / `host:deny` / `host:mute` / `host:remove` / `host:end` / `host:waiting-room` | host → server | Host controls (checked on the server) |
+| `host-changed` / `force-mute` / `removed` / `meeting-ended` | server → client | Results of host actions |
 
 ---
 
 ## Deployment
 
-The frontend and backend are deployed separately.
+The frontend goes to **Vercel**, the backend to **Render** (or Railway), the database to **MongoDB Atlas**. All have free tiers.
 
-### Backend → [Render](https://render.com) / [Railway](https://railway.app)
+### 1. Database: MongoDB Atlas
+1. Create a free cluster and a database user.
+2. Under **Network Access**, allow your backend host. On free tiers whose IPs change, `0.0.0.0/0` is the practical choice; the strong password protects it.
+3. Copy the connection string; it becomes `MONGO_URL`.
 
-1. Create a new **Web Service** with **`backend`** as the root directory.
-2. Build command: `npm install`. Start command: `npm start`.
-3. Set the `MONGO_URL` environment variable. The host sets `PORT` itself.
-4. Pick a host that supports **WebSockets**. Serverless platforms such as Vercel Functions can't keep Socket.IO connections open.
+### 2. Backend: Render (or Railway)
+1. New **Web Service**, root directory `backend`, build `npm install`, start `npm start`.
+2. Environment: `MONGO_URL`, `NODE_ENV=production`, `CLIENT_URL=https://<your-app>.vercel.app`, `TRUST_PROXY=2`.
+3. Deploy and note the URL, e.g. `https://linkup-api.onrender.com`. Check `https://…/api/v1/health`.
 
-### Frontend → [Vercel](https://vercel.com) / [Netlify](https://netlify.com)
+> Render's free tier sleeps after 15 minutes without traffic; the first request afterwards takes about 30 seconds.
 
-1. Set the root directory to **`frontend`**.
-2. Build command: `npm run build`. Output folder: `dist`.
-3. Set `VITE_API_URL` to your deployed backend URL.
-4. Add an SPA rewrite so that reloading `/call/ABC-1234` doesn't return a 404:
-   - **Vercel:** add `frontend/vercel.json` containing `{ "rewrites": [{ "source": "/(.*)", "destination": "/" }] }`
-   - **Netlify:** add `frontend/public/_redirects` containing `/* /index.html 200`
+### 3. Frontend: Vercel
+1. In `frontend/vercel.json` (and `frontend/public/_redirects` if you use Netlify), replace `YOUR-BACKEND.onrender.com` with your backend's address.
+2. Import the repo in Vercel, root directory `frontend`. Vite is detected automatically.
+3. Environment: `VITE_SOCKET_URL=https://linkup-api.onrender.com`.
+4. Deploy, then make sure `CLIENT_URL` on the backend matches the final Vercel URL exactly (no trailing slash).
 
 ### Production checklist
 
-- [ ] **HTTPS everywhere.** Browsers only allow camera, mic and screen sharing on secure (HTTPS) pages.
-- [ ] **MongoDB Atlas network access.** Allow your backend host's IP address.
-- [ ] **TURN server.** STUN alone doesn't work on some strict networks (some office and mobile networks). Add a TURN server, such as [Metered](https://www.metered.ca/tools/openrelay/) or a self-hosted coturn, to `RTC_CONFIG` in `Call.jsx`.
-- [ ] **CORS.** Allow only your frontend's domain instead of every origin.
+- [ ] `NODE_ENV=production` on the backend (Secure cookies)
+- [ ] `CLIENT_URL` set to the exact frontend URL (CORS and the Origin check)
+- [ ] `TRUST_PROXY` set, and `/api/v1/health` shows **your** IP, not a proxy's
+- [ ] Backend address replaced in `vercel.json` / `_redirects`
+- [ ] `VITE_SOCKET_URL` set on Vercel
+- [ ] MongoDB Atlas network access configured; strong database password
+- [ ] Everything served over **HTTPS**: browsers only allow camera and mic on secure pages
+- [ ] `.env` files are **not** committed (they're in `.gitignore`)
+- [ ] Log in, start a call from two devices and check the connection-quality tooltip
 
 ---
 
-## Roadmap
+## Limitations and roadmap
 
-- [ ] Meeting history (`add_to_activity` / `get_all_activity` routes)
-- [ ] Check the auth token before letting someone join a room
-- [ ] TURN server support
-- [ ] Waiting room / host controls (mute or remove participants)
-- [ ] An SFU (for example mediasoup or LiveKit) for larger meetings
-- [ ] Background blur
+**Known limitations**
+- **Mesh topology:** every participant sends a stream to every other one, so quality drops beyond about 5–6 people. Larger meetings need an SFU (e.g. mediasoup or LiveKit).
+- **No TURN server** by default (see [above](#stun-turn-and-why-there-is-no-turn-server)).
+- **Single server instance:** room state lives in memory. Scaling out would need the Socket.IO Redis adapter and a shared store for tickets.
+
+**Ideas for later**
+- Recording with `MediaRecorder`
+- Breakout rooms, polls
+- Automated test suite in CI (the backend is already tested end-to-end against an in-memory MongoDB during development)
 
 ---
 
-## Author
+## What I learned
 
-**Sarvesh** · [GitHub @Sarvesh0457](https://github.com/Sarvesh0457)
+- **WebRTC fundamentals:** offer/answer negotiation, ICE candidates, why NAT makes peer-to-peer hard, and what STUN and TURN each solve
+- **Reading `getStats()`** to measure round-trip time and packet loss, and to see which network path a connection actually uses
+- **Real-time state with Socket.IO:** rooms, server-authoritative host controls, waiting rooms, and keeping clients in sync through reconnects
+- **Web security in practice:** httpOnly cookie sessions vs. tokens in `localStorage`, CSRF and SameSite, rate limiting, timing-safe login, NoSQL injection, and the cross-site cookie problem when frontend and backend live on different domains
 
-If you found this project useful, consider giving it a ⭐
+---
+
+<div align="center">
+
+Made by **[Sarvesh](https://github.com/Sarvesh0457)** · If you found this useful, a ⭐ is appreciated
+
+</div>

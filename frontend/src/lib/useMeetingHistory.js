@@ -4,11 +4,10 @@ import { useAuth } from '@/context/AuthContext.jsx'
 import { api } from '@/lib/api.js'
 
 // Loads the signed-in user's meeting history and offers delete / clear.
-// An expired login sends the user back to the login page.
+// The session cookie is sent automatically; an expired session goes back to the login page.
 export function useMeetingHistory(limit = 50) {
-  const { user, logout } = useAuth()
+  const { isLoggedIn, sessionExpired } = useAuth()
   const navigate = useNavigate()
-  const token = user?.token
 
   const [meetings, setMeetings] = useState([])
   const [loading, setLoading] = useState(true)
@@ -17,28 +16,28 @@ export function useMeetingHistory(limit = 50) {
   const handleError = useCallback(
     (err) => {
       if (err.status === 401) {
-        logout()
+        sessionExpired()
         navigate('/login', { replace: true })
         return
       }
       setError(err.message)
     },
-    [logout, navigate]
+    [sessionExpired, navigate]
   )
 
   const load = useCallback(async () => {
-    if (!token) return
+    if (!isLoggedIn) return
     setLoading(true)
     setError('')
     try {
-      const data = await api(`/users/history?limit=${limit}`, { token })
+      const data = await api(`/users/history?limit=${limit}`)
       setMeetings(data.meetings)
     } catch (err) {
       handleError(err)
     } finally {
       setLoading(false)
     }
-  }, [token, limit, handleError])
+  }, [isLoggedIn, limit, handleError])
 
   useEffect(() => {
     load()
@@ -49,23 +48,23 @@ export function useMeetingHistory(limit = 50) {
       const before = meetings
       setMeetings((list) => list.filter((m) => m.id !== id)) // optimistic
       try {
-        await api(`/users/history/${id}`, { method: 'DELETE', token })
+        await api(`/users/history/${id}`, { method: 'DELETE' })
       } catch (err) {
         setMeetings(before)
         handleError(err)
       }
     },
-    [meetings, token, handleError]
+    [meetings, handleError]
   )
 
   const clearAll = useCallback(async () => {
     try {
-      await api('/users/history', { method: 'DELETE', token })
+      await api('/users/history', { method: 'DELETE' })
       setMeetings([])
     } catch (err) {
       handleError(err)
     }
-  }, [token, handleError])
+  }, [handleError])
 
   return { meetings, loading, error, reload: load, remove, clearAll }
 }
