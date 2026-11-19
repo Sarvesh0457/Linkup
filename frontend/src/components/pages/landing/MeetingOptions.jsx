@@ -1,14 +1,44 @@
-import { useNavigate } from "react-router-dom"
+import { useEffect, useState } from "react"
+import { useLocation, useNavigate } from "react-router-dom"
 import { useAuth } from "@/context/AuthContext.jsx"
 
 export default function MeetingOptions() {
   const { user } = useAuth()
   const firstName = user?.name?.split(" ")[0] || "there"
   const navigate = useNavigate()
+  const location = useLocation()
+
+  // "You left the meeting · …" sent by Call.jsx when leaving
+  const [notice, setNotice] = useState(location.state?.left || "")
+
+  // show it once: clear it from history so a refresh doesn't bring it back, and hide it after a while
+  useEffect(() => {
+    if (!location.state?.left) return
+    navigate(location.pathname, { replace: true, state: null })
+    const t = setTimeout(() => setNotice(""), 6000)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   return (
     <div className="grid min-h-[calc(100vh-96px)] grid-cols-1 items-center gap-9 px-6 py-10 sm:px-12 lg:grid-cols-[1.05fr_1fr]">
       <div className="text-center lg:text-left">
+        {notice && (
+          <div
+            role="status"
+            className="mx-auto mb-6 flex max-w-md items-center gap-3 rounded-xl border border-line bg-panel px-4 py-3 text-left text-[13.5px] text-muted-ink lg:mx-0"
+          >
+            <span className="h-2 w-2 shrink-0 rounded-full bg-amber" />
+            <span className="flex-1">{notice}</span>
+            <button
+              onClick={() => setNotice("")}
+              aria-label="Dismiss"
+              className="text-lg leading-none text-muted-ink hover:text-ink"
+            >
+              ×
+            </button>
+          </div>
+        )}
         <h1 className="mb-3.5 font-heading text-3xl font-semibold leading-tight tracking-tight text-ink sm:text-4xl">
           Good to see you, {firstName}
         </h1>
@@ -54,8 +84,10 @@ export default function MeetingOptions() {
       <div className="flex justify-center">
         <div className="w-full max-w-[400px] rotate-[1.6deg] rounded-[20px] border border-line bg-panel p-4 shadow-[0_30px_60px_-22px_rgba(0,0,0,0.55)]">
           <div className="flex items-center justify-between px-1.5 pb-3">
-            <span className="text-[0.75rem] font-semibold text-muted-ink">Your last call</span>
-            <span className="text-[0.75rem] text-muted-ink">2 days ago</span>
+            <span className="text-[0.75rem] font-semibold text-muted-ink">Meeting preview</span>
+            <span className="flex items-center gap-1.5 text-[0.75rem] text-muted-ink">
+              <span className="h-1.5 w-1.5 rounded-full bg-amber" /> Ready when you are
+            </span>
           </div>
           <div className="grid grid-cols-2 gap-2">
             {[

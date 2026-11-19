@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { useLocation, useNavigate } from "react-router-dom"
 import { useAuth } from "@/context/AuthContext.jsx"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -15,8 +15,12 @@ export default function Authenticate({ mode = "login" }) {
   const [loading, setLoading] = useState(false)
 
   const navigate = useNavigate()
+  const location = useLocation()
   const { login } = useAuth()
   const isLogin = mode === "login"
+
+  // set when a call link sent us here while logged out: { next: "/join", code: "ABC-1234" }
+  const redirect = location.state?.next ? location.state : null
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -38,10 +42,8 @@ export default function Authenticate({ mode = "login" }) {
         const data = await res.json()
         if (!res.ok) throw new Error(data.message || "Login failed")
 
-        // Backend's /login doesn't return `name` yet — see the patch above.
-        // Falls back to the username so the greeting isn't blank until then.
+        // falls back to the username in case an account has no name stored
         login({ name: data.name || username, token: data.token })
-        localStorage.setItem("linkup_token", data.token)
       } else {
         const registerRes = await fetch(`${API_URL}/api/v1/users/register`, {
           method: "POST",
@@ -62,10 +64,11 @@ export default function Authenticate({ mode = "login" }) {
         if (!loginRes.ok) throw new Error(loginData.message || "Login after sign up failed")
 
         login({ name, token: loginData.token })
-        localStorage.setItem("linkup_token", loginData.token)
       }
 
-      navigate("/")
+      // back to the call link they opened, with the code filled in; otherwise home
+      if (redirect) navigate(redirect.next, { replace: true, state: { code: redirect.code } })
+      else navigate("/")
     } catch (err) {
       setError(err.message || "Something went wrong")
     } finally {
@@ -158,14 +161,14 @@ export default function Authenticate({ mode = "login" }) {
           {isLogin ? (
             <>
               Don't have an account?{" "}
-              <button onClick={() => navigate("/signup")} className="font-semibold text-amber hover:underline">
+              <button onClick={() => navigate("/signup", { replace: true, state: location.state })} className="font-semibold text-amber hover:underline">
                 Sign up
               </button>
             </>
           ) : (
             <>
               Already have an account?{" "}
-              <button onClick={() => navigate("/login")} className="font-semibold text-amber hover:underline">
+              <button onClick={() => navigate("/login", { replace: true, state: location.state })} className="font-semibold text-amber hover:underline">
                 Log in
               </button>
             </>

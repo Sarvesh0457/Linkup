@@ -7,7 +7,8 @@ const WEEK_MS = 7 * 24 * 60 * 60 * 1000
 function clearSession() {
   try {
     localStorage.removeItem(KEY)
-    localStorage.removeItem('token') // the separate key Authenticate.jsx writes
+    localStorage.removeItem('token')
+    localStorage.removeItem('linkup_token') // old duplicate key; no longer written, cleared for existing users
   } catch {
     /* storage blocked */
   }

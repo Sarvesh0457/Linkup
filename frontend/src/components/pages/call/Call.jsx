@@ -249,7 +249,7 @@ export default function Call() {
 
   // direct link / refresh: no lobby state, so send them through Setup (prefilled with the code)
   useEffect(() => {
-    if (!isLoggedIn) navigate('/login', { replace: true })
+    if (!isLoggedIn) navigate('/login', { replace: true, state: { next: '/join', code } })
     else if (!lobby) navigate('/join', { replace: true, state: { code } })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])

@@ -55,7 +55,8 @@ export default function Setup({ mode = 'create' }) {
   const [code] = useState(generateCode)
   const [title, setTitle] = useState('')
   const location = useLocation()
-  const [joinCode, setJoinCode] = useState('')
+  // prefilled when arriving from a call link (Call.jsx and login pass the code along)
+  const [joinCode, setJoinCode] = useState(() => location.state?.code || '')
   const [joinError, setJoinError] = useState(false)
   const [copied, setCopied] = useState(false)
 
@@ -74,8 +75,8 @@ export default function Setup({ mode = 'create' }) {
 
   // must be logged in to get here
   useEffect(() => {
-    if (!isLoggedIn) navigate('/login', { replace: true })
-  }, [isLoggedIn, navigate])
+    if (!isLoggedIn) navigate('/login', { replace: true, state: { next: location.pathname, code: location.state?.code } })
+  }, [isLoggedIn, navigate, location.pathname, location.state?.code])
 
   // camera + mic preview
   useEffect(() => {

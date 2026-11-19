@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/context/AuthContext.jsx"
-import { useNavigate } from "react-router-dom"
+import { useLocation, useNavigate } from "react-router-dom"
 
 function Logo() {
   return (
@@ -24,6 +24,9 @@ function getInitials(name = "") {
 export default function Navbar() {
   const { user, isLoggedIn, logout } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
+  // keep a pending call link ({ next, code }) when moving between log in and sign up
+  const authState = location.state?.next ? location.state : undefined
 
   return (
     <nav className="flex flex-wrap items-center justify-between gap-2.5 px-6 py-5 sm:px-12 h-23">
@@ -56,20 +59,20 @@ export default function Navbar() {
             <Button
               variant="outline"
               className="border-line bg-transparent text-ink hover:bg-panel-2 w-[6rem] h-[2.9rem] text-base rounded-lg font-semibold"
-              onClick={() => navigate("/login")}
+              onClick={() => navigate("/login", { state: authState })}
             >
               Log in
             </Button>
             <Button
               className="bg-amber text-amber-ink hover:bg-amber/90 w-[6rem] h-[2.9rem] text-base rounded-lg font-semibold"
-              onClick={() => navigate("/signup")}
+              onClick={() => navigate("/signup", { state: authState })}
             >
               Sign up
             </Button>
           </div>
           <Button
             className="bg-amber text-amber-ink hover:bg-amber/90 sm:hidden w-[7.5rem] h-[2.7rem] text-base rounded-lg font-semibold"
-            onClick={() => navigate("/signup")}
+            onClick={() => navigate("/signup", { state: authState })}
           >
             Get started
           </Button>

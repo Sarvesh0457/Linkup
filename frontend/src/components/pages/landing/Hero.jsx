@@ -29,20 +29,14 @@ export default function Hero() {
             I have an account
           </Button>
         </div>
-        <div className="flex items-center justify-center gap-2.5 text-[12.5px] text-muted-ink lg:justify-start">
-          <div className="flex">
-            {["RM", "JK", "SA", "+"].map((label, i) => (
-              <span
-                key={label}
-                className="-ml-1.5 flex h-6 w-6 items-center justify-center rounded-full border-2 border-bg bg-panel-2 text-[9.5px] font-semibold first:ml-0"
-                style={{ zIndex: 4 - i }}
-              >
-                {label}
-              </span>
-            ))}
-          </div>
-          Joined by 4,000+ remote teams
-        </div>
+        <ul className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-[12.5px] text-muted-ink lg:justify-start">
+          {["Free to use", "No downloads", "Works in your browser"].map((label) => (
+            <li key={label} className="flex items-center gap-1.5">
+              <span className="h-1.5 w-1.5 rounded-full bg-amber" />
+              {label}
+            </li>
+          ))}
+        </ul>
       </div>
 
       <div className="flex justify-center">
