@@ -37,6 +37,14 @@ export default function Navbar() {
 
       {isLoggedIn ? (
         <div className="flex items-center gap-2.5 text-[13.5px] text-muted-ink">
+          <button
+            onClick={() => navigate("/history")}
+            className={`mr-1 rounded-lg px-2.5 py-1.5 font-semibold transition hover:bg-panel-2 hover:text-ink ${
+              location.pathname === "/history" ? "text-ink" : ""
+            }`}
+          >
+            History
+          </button>
           <div className="flex h-[30px] w-[30px] items-center justify-center rounded-full bg-panel-2 font-heading text-xs font-semibold text-ink">
             {getInitials(user?.name)}
           </div>

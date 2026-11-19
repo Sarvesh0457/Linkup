@@ -4,8 +4,17 @@ import { io } from 'socket.io-client'
 import { useAuth } from '@/context/AuthContext.jsx'
 
 const SERVER_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+// STUN finds your public address; TURN relays media when a direct path is blocked (strict office,
+// school or mobile networks). Set VITE_TURN_URL / VITE_TURN_USERNAME / VITE_TURN_CREDENTIAL to add one.
+const TURN = import.meta.env.VITE_TURN_URL
 const RTC_CONFIG = {
-  iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }],
+  iceServers: [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' },
+    ...(TURN
+      ? [{ urls: TURN.split(',').map((u) => u.trim()), username: import.meta.env.VITE_TURN_USERNAME, credential: import.meta.env.VITE_TURN_CREDENTIAL }]
+      : []),
+  ],
 }
 const DEFAULT_PEER = { name: 'Guest', mic: true, cam: true, hand: false, sharing: false }
 const COLORS = ['#9b8ce8', '#5aa9a3', '#d98b5f', '#c9a24b', '#6fae6a', '#d97aa5', '#6fa3d9']
@@ -191,7 +200,7 @@ export default function Call() {
   const { code } = useParams()
   const { state: lobby } = useLocation()
   const navigate = useNavigate()
-  const { user, isLoggedIn } = useAuth()
+  const { user, isLoggedIn, logout } = useAuth()
   const userName = user?.name || 'Guest'
 
   const socketRef = useRef(null)
@@ -262,7 +271,11 @@ export default function Call() {
     const dropPeer = (id) => {
       pcsRef.current[id]?.pc.close()
       delete pcsRef.current[id]
-      setPeers(({ [id]: _gone, ...rest }) => rest)
+      setPeers((prev) => {
+        const next = { ...prev }
+        delete next[id]
+        return next
+      })
       setPinnedId((p) => (p === id ? null : p))
     }
 
@@ -333,7 +346,8 @@ export default function Call() {
       setAvail({ mic: hasMic, cam: hasCam })
       setLocalStream(stream)
 
-      const socket = io(SERVER_URL)
+      // the server only accepts logged-in users and takes your display name from your account
+      const socket = io(SERVER_URL, { auth: { token: user?.token } })
       socketRef.current = socket
 
       socket.on('connect', () => {
@@ -343,7 +357,14 @@ export default function Call() {
         setError('')
         socket.emit('join-call', code, { name: userName, title: lobby.title, ...meRef.current })
       })
-      socket.on('connect_error', () => {
+      socket.on('connect_error', (err) => {
+        if (err?.message === 'unauthorized') {
+          // token no longer valid: log in again, then come straight back to this call
+          socket.disconnect()
+          logout()
+          navigate('/login', { replace: true, state: { next: '/join', code } })
+          return
+        }
         if (!joinedRef.current) setError("Can't reach the LinkUp server. Is the backend running?")
       })
       socket.on('room-info', (info) => {
@@ -478,8 +499,9 @@ export default function Call() {
     notify('Meeting code copied')
   }
   const leave = () => {
-    const mins = Math.max(1, Math.round((Date.now() - joinedAtRef.current) / 60000))
-    navigate('/', { state: { left: `You left the meeting · you were in for ${mins} min` } })
+    const mins = Math.round((Date.now() - joinedAtRef.current) / 60000)
+    const spent = mins < 1 ? 'less than a minute' : `${mins} min`
+    navigate('/', { state: { left: `You left the meeting · you were in for ${spent}` } })
   }
 
   /* ---- derived ---- */
@@ -577,7 +599,7 @@ export default function Call() {
       {/* top bar */}
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-[#2a2e3d] px-5 py-3.5">
         <div className="flex min-w-0 items-center gap-3 font-display text-[15px] font-semibold">
-          <span className="truncate">{room?.title || 'Meeting'}</span>
+          <span className="truncate">{room?.title || code}</span>
           <button
             onClick={copyCode}
             title="Copy meeting code"

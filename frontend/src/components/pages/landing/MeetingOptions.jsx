@@ -1,12 +1,16 @@
 import { useEffect, useState } from "react"
 import { useLocation, useNavigate } from "react-router-dom"
 import { useAuth } from "@/context/AuthContext.jsx"
+import { useMeetingHistory } from "@/lib/useMeetingHistory.js"
+import { formatDuration, isInProgress, relativeLabel } from "@/lib/format.js"
+import { Faces } from "../history/History.jsx"
 
 export default function MeetingOptions() {
   const { user } = useAuth()
   const firstName = user?.name?.split(" ")[0] || "there"
   const navigate = useNavigate()
   const location = useLocation()
+  const { meetings, loading } = useMeetingHistory(4)
 
   // "You left the meeting · …" sent by Call.jsx when leaving
   const [notice, setNotice] = useState(location.state?.left || "")
@@ -82,32 +86,78 @@ export default function MeetingOptions() {
       </div>
 
       <div className="flex justify-center">
-        <div className="w-full max-w-[400px] rotate-[1.6deg] rounded-[20px] border border-line bg-panel p-4 shadow-[0_30px_60px_-22px_rgba(0,0,0,0.55)]">
-          <div className="flex items-center justify-between px-1.5 pb-3">
-            <span className="text-[0.75rem] font-semibold text-muted-ink">Meeting preview</span>
-            <span className="flex items-center gap-1.5 text-[0.75rem] text-muted-ink">
-              <span className="h-1.5 w-1.5 rounded-full bg-amber" /> Ready when you are
-            </span>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            {[
-              { i: "RM", n: "Rhea", grad: "from-[#3a3f56] to-[#26293a]" },
-              { i: "JK", n: "Jonas", grad: "from-[#4a4166] to-[#26293a]" },
-              { i: "SA", n: "Sana", grad: "from-[#3f4f5a] to-[#26293a]" },
-              { i: "DP", n: "Devan", grad: "from-panel-2 to-panel-2" },
-            ].map((t) => (
-              <div key={t.i} className={`relative flex aspect-[1.35] items-center justify-center rounded-xl bg-gradient-to-br ${t.grad}`}>
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 font-heading text-[11.5px] font-semibold text-ink">
-                  {t.i}
+        {!loading && meetings.length > 0 ? (
+          <RecentMeetings meetings={meetings} navigate={navigate} />
+        ) : (
+          <div className="w-full max-w-[400px] rotate-[1.6deg] rounded-[20px] border border-line bg-panel p-4 shadow-[0_30px_60px_-22px_rgba(0,0,0,0.55)]">
+            <div className="flex items-center justify-between px-1.5 pb-3">
+              <span className="text-[0.75rem] font-semibold text-muted-ink">Meeting preview</span>
+              <span className="flex items-center gap-1.5 text-[0.75rem] text-muted-ink">
+                <span className="h-1.5 w-1.5 rounded-full bg-amber" /> Ready when you are
+              </span>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { i: "RM", n: "Rhea", grad: "from-[#3a3f56] to-[#26293a]" },
+                { i: "JK", n: "Jonas", grad: "from-[#4a4166] to-[#26293a]" },
+                { i: "SA", n: "Sana", grad: "from-[#3f4f5a] to-[#26293a]" },
+                { i: "DP", n: "Devan", grad: "from-panel-2 to-panel-2" },
+              ].map((t) => (
+                <div key={t.i} className={`relative flex aspect-[1.35] items-center justify-center rounded-xl bg-gradient-to-br ${t.grad}`}>
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 font-heading text-[11.5px] font-semibold text-ink">
+                    {t.i}
+                  </div>
+                  <span className="absolute bottom-1.5 left-1.5 rounded-md bg-black/50 px-1.5 py-0.5 text-[9.5px] text-ink">
+                    {t.n}
+                  </span>
                 </div>
-                <span className="absolute bottom-1.5 left-1.5 rounded-md bg-black/50 px-1.5 py-0.5 text-[9.5px] text-ink">
-                  {t.n}
-                </span>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
+        )}
       </div>
+    </div>
+  )
+}
+
+// shown instead of the preview once the user has been in a call
+function RecentMeetings({ meetings, navigate }) {
+  return (
+    <div className="w-full max-w-[420px] rounded-[20px] border border-line bg-panel p-4 shadow-[0_30px_60px_-22px_rgba(0,0,0,0.55)]">
+      <div className="flex items-center justify-between px-1.5 pb-3">
+        <span className="text-[0.75rem] font-semibold text-muted-ink">Recent meetings</span>
+        <button onClick={() => navigate("/history")} className="text-[0.75rem] font-semibold text-amber hover:underline">
+          View all →
+        </button>
+      </div>
+      <ul className="space-y-1.5">
+        {meetings.map((m) => {
+          const live = isInProgress(m)
+          const duration = formatDuration(m.joinedAt, m.endedAt)
+          return (
+            <li key={m.id}>
+              <button
+                onClick={() => navigate("/join", { state: { code: m.code } })}
+                title={live ? "Rejoin this meeting" : "Start a new call with this code"}
+                className="group flex w-full items-center gap-3 rounded-xl bg-panel-2/60 p-3 text-left transition hover:bg-panel-2"
+              >
+                <Faces names={m.participants} max={2} size="h-8 w-8 text-[10.5px]" />
+                <span className="min-w-0 flex-1">
+                  <span className={`block truncate text-[13.5px] font-semibold text-ink ${m.title === m.code ? "font-mono tracking-[0.04em]" : ""}`}>
+                    {m.title}
+                  </span>
+                  <span className="block truncate text-[12px] text-muted-ink">
+                    {live ? "In progress" : [relativeLabel(m.joinedAt), duration].filter(Boolean).join(" · ")}
+                  </span>
+                </span>
+                <span className="shrink-0 text-[12px] font-semibold text-muted-ink transition group-hover:text-amber">
+                  {live ? "Rejoin" : "Join"}
+                </span>
+              </button>
+            </li>
+          )
+        })}
+      </ul>
     </div>
   )
 }

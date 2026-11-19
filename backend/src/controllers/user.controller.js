@@ -6,6 +6,9 @@ import crypto from 'crypto';
 // only accept real, non-empty strings (objects like {"$ne": null} would become MongoDB query operators)
 const isText = (value) => typeof value === 'string' && value.trim() !== '';
 
+// compared against when the username doesn't exist, so both cases take the same time
+const DUMMY_HASH = bcrypt.hashSync('linkup-timing-guard', 12);
+
 const login = async (req,res) => {
     const {username, password} = req.body ?? {};
 
@@ -16,24 +19,25 @@ const login = async (req,res) => {
     try{
         const user = await User.findOne({username});
 
-        if(!user){
-            return res.status(httpStatus.NOT_FOUND).json({message: "Wrong credentials"});
-        }
-
-        const isMatch = await bcrypt.compare(password,user.password);
+        // same status and message for "no such user" and "wrong password",
+        // so the response doesn't reveal which usernames exist
+        const isMatch = await bcrypt.compare(password, user?.password ?? DUMMY_HASH) && !!user;
 
         if(!isMatch){
             return res.status(httpStatus.UNAUTHORIZED).json({message: "Wrong credentials"});
         }
 
-        let token = crypto.randomBytes(20).toString("hex");
+        // keep the existing token so logging in on a second device doesn't sign out the first
+        if(!user.token){
+            user.token = crypto.randomBytes(20).toString("hex");
+            await user.save();
+        }
 
-        user.token = token;
-        await user.save();
-        return res.status(httpStatus.OK).json({token:token, name: user.name});
+        return res.status(httpStatus.OK).json({token: user.token, name: user.name});
 
     }catch(e) {
-        return res.status(500).json({message: "something went wrong ",e});
+        console.error("login failed:", e);
+        return res.status(httpStatus.INTERNAL_SERVER_ERROR).json({message: "something went wrong, please try again"});
     }
 }
 
@@ -64,7 +68,12 @@ const register = async (req,res) => {
         res.status(httpStatus.CREATED).json({message: "User created"});
 
     }catch(e){
-        return res.status(httpStatus.INTERNAL_SERVER_ERROR).json({message: `something went wrong ${e}`});
+        // two sign-ups racing for the same username: the unique index rejects the second one
+        if(e?.code === 11000){
+            return res.status(httpStatus.CONFLICT).json({message: "User Already exists"});
+        }
+        console.error("register failed:", e);
+        return res.status(httpStatus.INTERNAL_SERVER_ERROR).json({message: "something went wrong, please try again"});
     }
 }
 

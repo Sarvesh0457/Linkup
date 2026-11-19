@@ -274,7 +274,7 @@ export default function Setup({ mode = 'create' }) {
                 Share this code with your team. It stays active as long as someone's in the room.
               </p>
 
-              <label className="mb-1.5 block text-[12.5px] text-[#8c91a6]">Meeting title (optional)</label>
+              <label className="mb-1.5 block text-[12.5px] text-[#8c91a6]">Meeting title (optional) <span className="text-[#5f6478]">· leave blank to use the code</span></label>
               <input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
