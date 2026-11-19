@@ -15,8 +15,7 @@ Built from scratch with **WebRTC** for audio/video, **Socket.IO** for signaling,
 ![MongoDB](https://img.shields.io/badge/MongoDB-Mongoose_9-47a248?logo=mongodb&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-38bdf8?logo=tailwindcss&logoColor=white)
 
-<!-- Replace with a screenshot or short GIF of a call -->
-<!-- ![LinkUp call](docs/screenshots/call.png) -->
+![LinkUp call](docs/screenshots/call.png)
 
 </div>
 
@@ -70,19 +69,17 @@ Built from scratch with **WebRTC** for audio/video, **Socket.IO** for signaling,
 
 ## Screenshots
 
-<!-- Save images in docs/screenshots/ and remove the comment markers -->
-
 | Home | Lobby with waiting room |
 |:---:|:---:|
-| <!-- ![Home](docs/screenshots/home.png) --> | <!-- ![Lobby](docs/screenshots/lobby.png) --> |
+| ![Home](docs/screenshots/home.png) | ![Lobby](docs/screenshots/lobby.png) |
 
-| In a call | Host: waiting room and controls |
+| Guest in the waiting room | Host: admit, mute, remove |
 |:---:|:---:|
-| <!-- ![Call](docs/screenshots/call.png) --> | <!-- ![Host controls](docs/screenshots/host-controls.png) --> |
+| ![Waiting room](docs/screenshots/waiting.png) | ![Host controls](docs/screenshots/host-controls.png) |
 
 | Chat with reactions | Meeting history |
 |:---:|:---:|
-| <!-- ![Chat](docs/screenshots/chat.png) --> | <!-- ![History](docs/screenshots/history.png) --> |
+| ![Chat](docs/screenshots/chat.png) | ![History](docs/screenshots/history.png) |
 
 ---
 

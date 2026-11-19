@@ -29,6 +29,7 @@ const CONNECT_MSGS = [
 const CHIPS = [['RM', 98, 0], ['JK', 49, 85], ['SA', -49, 85], ['DP', -98, 0], ['LT', -49, -85], ['You', 49, -85]]
 const STATS_EVERY_MS = 2000
 const TYPING_IDLE_MS = 2500
+const TYPING_HEARTBEAT_MS = 2000
 
 const CSS = `
 @keyframes lu-chip{0%{opacity:0;transform:translate(var(--sx),var(--sy)) scale(.4)}100%{opacity:1;transform:translate(var(--fx),var(--fy)) scale(1)}}
@@ -783,8 +784,13 @@ export default function Call() {
     setShowReactions(false)
   }
   const setMyTyping = (on) => {
-    if (myTypingRef.current.on === on) return
-    myTypingRef.current.on = on
+    const me = myTypingRef.current
+    // while typing, repeat "on" every couple of seconds so the others' safety timeout
+    // doesn't hide the indicator in the middle of a long message
+    const heartbeatDue = on && Date.now() - (me.sentAt || 0) > TYPING_HEARTBEAT_MS
+    if (me.on === on && !heartbeatDue) return
+    me.on = on
+    me.sentAt = on ? Date.now() : 0
     socketRef.current?.emit('typing', on)
   }
   const onDraftChange = (value) => {
