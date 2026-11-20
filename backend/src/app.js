@@ -31,14 +31,7 @@ app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/users", userRoutes);
 
 // for uptime checks, and to confirm TRUST_PROXY: "ip" should be your own address
-app.get("/api/v1/health", (req, res) => res.json({
-    ok: true,
-    ip: req.ip,
-    // TEMPORARY: the proxy chain, to choose the right TRUST_PROXY. Remove after setup.
-    chain: req.headers['x-forwarded-for'],
-    cf: req.headers['cf-connecting-ip'],
-    real: req.headers['x-real-ip'],
-}));
+app.get("/api/v1/health", (req, res) => res.json({ ok: true, ip: req.ip }));
 
 // unknown routes answer in JSON like the rest of the API
 app.use((req, res) => {

@@ -23,6 +23,37 @@ export const loginLimiter = rateLimit({
     handler: tooMany("too many login attempts, please wait 15 minutes and try again"),
 });
 
+// Login: 30 failed attempts per hour for one username, from anywhere.
+// The limit above is per IP, and an IP can be faked by calling the backend directly
+// with a made-up X-Forwarded-For header; this one can't be dodged that way.
+export const accountLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000,
+    limit: 30,
+    standardHeaders: "draft-7",
+    legacyHeaders: false,
+    skipSuccessfulRequests: true,
+    keyGenerator: (req) =>
+        "acct|" + (typeof req.body?.username === "string" ? normalizeUsername(req.body.username) : ""),
+    handler: tooMany("too many failed logins for this account, please try again in an hour"),
+});
+
+// The address that connected to our host's edge network, e.g. Cloudflare's CF-Connecting-IP on Render.
+// The edge overwrites this header, so it can't be faked. Through the Vercel rewrite it is Vercel's address
+// (shared by many users), so the limit is high: it only stops someone hammering the backend directly.
+// EDGE_IP_HEADER must only be set when the host really overwrites that header.
+const edgeIp = (req) => {
+    const header = process.env.EDGE_IP_HEADER;
+    return (header && req.get(header)) || req.ip;
+};
+export const edgeLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 300,
+    standardHeaders: "draft-7",
+    legacyHeaders: false,
+    keyGenerator: (req) => "edge|" + edgeIp(req),
+    handler: tooMany("too many requests, please slow down"),
+});
+
 // Sign-up: 5 new accounts per hour per IP (typos and taken usernames don't count)
 export const registerLimiter = rateLimit({
     windowMs: 60 * 60 * 1000,

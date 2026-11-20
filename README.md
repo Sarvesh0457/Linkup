@@ -261,7 +261,8 @@ In development Vite forwards `/api` to the backend, just like Vercel does in pro
 | `PORT` | no | Port to listen on (default `3001`; hosts set it for you) |
 | `NODE_ENV` | production | Set to `production` so the session cookie is `Secure` (HTTPS only) |
 | `CLIENT_URL` | production | Your frontend URL, e.g. `https://linkup.vercel.app` (comma-separate several). Unset = any origin, for development only |
-| `TRUST_PROXY` | production | Number of proxies in front of the app, so rate limits see real client IPs. With Vercel → Render this is usually `2`; check that `/api/v1/health` shows your own IP |
+| `TRUST_PROXY` | production | Number of proxies in front of the app, so rate limits see real client IPs. With Vercel → Render it is `4` (Vercel, Cloudflare and two Render routers); check that `/api/v1/health` shows your own IP |
+| `EDGE_IP_HEADER` | Render | `cf-connecting-ip`. The address that reached the host's edge; it can't be faked, so it backs a second rate limit for people calling the backend directly |
 
 ### Frontend (`frontend/.env`)
 
@@ -322,7 +323,7 @@ The frontend goes to **Vercel**, the backend to **Render** (or Railway), the dat
 
 ### 2. Backend: Render (or Railway)
 1. New **Web Service**, root directory `backend`, build `npm install`, start `npm start`.
-2. Environment: `MONGO_URL`, `NODE_ENV=production`, `CLIENT_URL=https://<your-app>.vercel.app`, `TRUST_PROXY=2`.
+2. Environment: `MONGO_URL`, `NODE_ENV=production`, `CLIENT_URL=https://<your-app>.vercel.app`, `TRUST_PROXY=4`, `EDGE_IP_HEADER=cf-connecting-ip`.
 3. Deploy and note the URL, e.g. `https://linkup-api.onrender.com`. Check `https://…/api/v1/health`.
 
 > Render's free tier sleeps after 15 minutes without traffic; the first request afterwards takes about 30 seconds.
